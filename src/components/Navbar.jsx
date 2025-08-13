@@ -13,7 +13,7 @@ function Navbar() {
   return (
     <nav className="navbar navbar-expand-lg custom-navbar">
       <Link className="navbar-brand fw-bold fs-4" to="/">
-        📇 My App
+        📇 Contact Book
       </Link>
 
       <button
