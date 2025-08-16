@@ -38,7 +38,7 @@ function Navbar() {
             </Link>
           </li>
           <li className="nav-item">
-            <Link className={linkStyle("/contact")} to="/contact">
+            <Link className={linkStyle("/api/contact")} to="/api/contact">
               All Contacts
             </Link>
           </li>

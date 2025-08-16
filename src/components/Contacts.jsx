@@ -1,49 +1,81 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/style.css"; // reused styles
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
+// inside Contacts()
 
 function Contacts() {
   const [contacts, setContacts] = useState([]);
   const [search, setSearch] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: "username", direction: "asc" });
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [total, setTotal] = useState(0);
   const pageSize = 10;
 
-  useEffect(() => {
-    const dummy = Array.from({ length: 22 }, (_, i) => ({
-      id: i + 1,
-      username: `User ${i + 1}`,
-      email: `user${i + 1}@example.com`,
-      phone: `98765432${(i % 10).toString().padStart(2, "0")}`,
-    }));
-    setContacts(dummy);
-  }, []);
+  // Update modal state
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateData, setUpdateData] = useState({
+    id: null,
+    username: "",
+    email: "",
+    phonenumber: "",
+  });
 
-  const filteredContacts = contacts
-    .filter(
-      (c) =>
-        c.username.toLowerCase().includes(search.toLowerCase()) ||
-        c.email.toLowerCase().includes(search.toLowerCase()) ||
-        c.phone.includes(search)
-    )
-    .sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === "asc" ? -1 : 1;
-      if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
-    });
-
-  const totalPages = Math.ceil(filteredContacts.length / pageSize);
-  const paginatedContacts = filteredContacts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  const toggleSort = (key) => {
-    setSortConfig((prev) => ({
-      key,
-      direction: prev.key === key && prev.direction === "asc" ? "desc" : "asc",
-    }));
+  // ✅ Fetch from backend with pagination + search
+  const navigate = useNavigate();
+  const fetchContacts = async () => {
+    try {
+      const res = await axios.get("http://localhost:8000/api/contact", {
+        params: { page: currentPage, limit: pageSize, search },
+      });
+      setContacts(res.data.data || []);
+      setTotal(res.data.total || 0);
+    } catch (err) {
+      console.error("Failed to fetch contacts", err);
+    }
   };
 
+  // ✅ Delete from backend
+  const deleteContact = async (id) => {
+    try {
+      await axios.delete(`http://localhost:8000/api/contact/${id}`);
+      fetchContacts();
+    } catch (err) {
+      console.error("Failed to delete contact", err);
+    }
+  };
+
+  // ✅ Open update modal with existing data
+  const handleUpdateClick = (contact) => {
+    setUpdateData(contact);
+    setShowUpdateModal(true);
+  };
+
+  // ✅ Submit update API call
+  const handleUpdateSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(
+        `http://localhost:8000/api/contact/${updateData.id}`,
+        updateData
+      );
+      setShowUpdateModal(false);
+      fetchContacts();
+    } catch (err) {
+      console.error("Failed to update contact", err);
+    }
+  };
+
+  // Fetch when page/search changes
+  useEffect(() => {
+    fetchContacts();
+  }, [currentPage, search]);
+
+  const totalPages = Math.ceil(total / pageSize);
+
+  // ✅ Select handlers
   const toggleSelect = (id) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
@@ -51,22 +83,11 @@ function Contacts() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.length === paginatedContacts.length) {
+    if (selectedIds.length === contacts.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(paginatedContacts.map((c) => c.id));
+      setSelectedIds(contacts.map((c) => c.id));
     }
-  };
-
-  const handleDeleteSelected = () => {
-    setContacts(contacts.filter((c) => !selectedIds.includes(c.id)));
-    setSelectedIds([]);
-  };
-
-  const handleExportSelected = () => {
-    const selectedContacts = contacts.filter((c) => selectedIds.includes(c.id));
-    console.log("Exporting contacts:", selectedContacts);
-    alert(`Exporting ${selectedContacts.length} contacts`);
   };
 
   return (
@@ -74,25 +95,18 @@ function Contacts() {
       <div className="col-12 col-md-10 p-4 glass-container shadow">
         <h2 className="text-center mb-4 fw-bold text-dark">📇 Contact List</h2>
 
-        {/* Search & Actions */}
+        {/* Search */}
         <div className="d-flex justify-content-between mb-3">
           <input
             type="text"
             className="form-control contacts-search"
             placeholder="Search..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
           />
-          {selectedIds.length > 0 && (
-            <div>
-              <button className="btn btn-danger me-2" onClick={handleDeleteSelected}>
-                Delete Selected
-              </button>
-              <button className="btn btn-success" onClick={handleExportSelected}>
-                Export Selected
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Table */}
@@ -102,24 +116,21 @@ function Contacts() {
               <th>
                 <input
                   type="checkbox"
-                  checked={selectedIds.length === paginatedContacts.length && paginatedContacts.length > 0}
+                  checked={
+                    selectedIds.length === contacts.length &&
+                    contacts.length > 0
+                  }
                   onChange={toggleSelectAll}
                 />
               </th>
-              <th onClick={() => toggleSort("username")} className="sortable">
-                Username {sortConfig.key === "username" && (sortConfig.direction === "asc" ? "▲" : "▼")}
-              </th>
-              <th onClick={() => toggleSort("email")} className="sortable">
-                Email {sortConfig.key === "email" && (sortConfig.direction === "asc" ? "▲" : "▼")}
-              </th>
-              <th onClick={() => toggleSort("phone")} className="sortable">
-                Phone {sortConfig.key === "phone" && (sortConfig.direction === "asc" ? "▲" : "▼")}
-              </th>
+              <th>Username</th>
+              <th>Email</th>
+              <th>Phone</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {paginatedContacts.map((c) => (
+            {contacts.map((c) => (
               <tr key={c.id}>
                 <td>
                   <input
@@ -130,20 +141,30 @@ function Contacts() {
                 </td>
                 <td>{c.username}</td>
                 <td>{c.email}</td>
-                <td>{c.phone}</td>
+                <td>{c.phonenumber}</td>
                 <td>
-                  <button className="btn btn-info btn-sm action-btn">View</button>
-                  <button className="btn btn-warning btn-sm action-btn">Update</button>
+                  <button
+                    className="btn btn-info btn-sm me-2"
+                    onClick={() => navigate(`/api/contact/${c.id}`)}
+                  >
+                    View
+                  </button>
+                  <button
+                    className="btn btn-warning btn-sm me-2"
+                    onClick={() => handleUpdateClick(c)}
+                  >
+                    Update
+                  </button>
                   <button
                     className="btn btn-danger btn-sm"
-                    onClick={() => setContacts(contacts.filter((x) => x.id !== c.id))}
+                    onClick={() => deleteContact(c.id)}
                   >
                     Delete
                   </button>
                 </td>
               </tr>
             ))}
-            {paginatedContacts.length === 0 && (
+            {contacts.length === 0 && (
               <tr>
                 <td colSpan="5" className="text-center">
                   No contacts found.
@@ -157,23 +178,114 @@ function Contacts() {
         <div className="d-flex justify-content-center mt-3">
           <nav>
             <ul className="pagination">
-              <li className={`page-item ${currentPage === 1 ? "disabled" : ""}`}>
-                <button className="page-link" onClick={() => setCurrentPage((p) => p - 1)}>Previous</button>
+              <li
+                className={`page-item ${currentPage === 1 ? "disabled" : ""}`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                >
+                  Previous
+                </button>
               </li>
               {Array.from({ length: totalPages }, (_, i) => (
-                <li key={i} className={`page-item ${currentPage === i + 1 ? "active" : ""}`}>
-                  <button className="page-link" onClick={() => setCurrentPage(i + 1)}>
+                <li
+                  key={i}
+                  className={`page-item ${
+                    currentPage === i + 1 ? "active" : ""
+                  }`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
                     {i + 1}
                   </button>
                 </li>
               ))}
-              <li className={`page-item ${currentPage === totalPages ? "disabled" : ""}`}>
-                <button className="page-link" onClick={() => setCurrentPage((p) => p + 1)}>Next</button>
+              <li
+                className={`page-item ${
+                  currentPage === totalPages ? "disabled" : ""
+                }`}
+              >
+                <button
+                  className="page-link"
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                >
+                  Next
+                </button>
               </li>
             </ul>
           </nav>
         </div>
       </div>
+
+      {/* ✅ Update Modal */}
+      {showUpdateModal && (
+        <div
+          className="modal fade show d-block"
+          tabIndex="-1"
+          style={{ zIndex: 10000 }}
+        >
+          <div className="modal-dialog" style={{ zIndex: 100000 }}>
+            <div className="modal-content p-3">
+              <h5 className="mb-3">Update Contact</h5>
+              <form onSubmit={handleUpdateSubmit}>
+                <div className="mb-3">
+                  <label>Username</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={updateData.username}
+                    onChange={(e) =>
+                      setUpdateData({ ...updateData, username: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="mb-3">
+                  <label>Email</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    value={updateData.email}
+                    onChange={(e) =>
+                      setUpdateData({ ...updateData, email: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="mb-3">
+                  <label>Phone</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={updateData.phonenumber}
+                    onChange={(e) =>
+                      setUpdateData({
+                        ...updateData,
+                        phonenumber: e.target.value,
+                      })
+                    }
+                  />
+                </div>
+                <div className="d-flex justify-content-end">
+                  <button
+                    type="button"
+                    className="btn btn-secondary me-2"
+                    onClick={() => setShowUpdateModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+          {/* backdrop */}
+          <div className="modal-backdrop fade show"></div>
+        </div>
+      )}
     </div>
   );
 }

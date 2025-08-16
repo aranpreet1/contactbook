@@ -1,48 +1,51 @@
 import React, { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import * as XLSX from "xlsx";
 import "../styles/style.css"; // reused styles
 
 function ContactUploader() {
   const [errors, setErrors] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const data = evt.target.result;
-      const workbook = XLSX.read(data, { type: "binary" });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = XLSX.utils.sheet_to_json(
-        workbook.Sheets[sheetName],
-        { defval: "" }
-      );
+    const formData = new FormData();
+    formData.append("file", file);
 
-      const validationErrors = [];
+    try {
+      setLoading(true);
+      setErrors([]);
+      setSummary(null);
 
-      worksheet.forEach((row, index) => {
-        const rowNum = index + 2;
-        const username = String(row.username ?? row.Username ?? row.USERNAME ?? "").trim();
-        const email = String(row.email ?? row.Email ?? row.EMAIL ?? "").trim();
-        const phone = String(row.phone ?? row.Phone ?? row.PHONE ?? "").trim();
-
-        if (!username) {
-          validationErrors.push({ row: rowNum, message: "Username is missing" });
-        }
-        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          validationErrors.push({ row: rowNum, message: "Invalid or missing email" });
-        }
-        if (!phone || !/^\d{10}$/.test(phone)) {
-          validationErrors.push({ row: rowNum, message: "Phone must be a 10-digit number" });
-        }
+      const response = await fetch("http://localhost:8000/api/contact/upload", {
+        method: "POST",
+        body: formData,
       });
 
-      setErrors(validationErrors);
-    };
+      const data = await response.json();
+      setLoading(false);
 
-    reader.readAsBinaryString(file);
+      if (!response.ok) {
+        setSummary({ message: data.message || "Upload failed" });
+        return;
+      }
+
+      // Show backend response
+      setSummary({
+        message: data.message,
+        inserted: data.inserted,
+        failed: data.failed,
+      });
+
+      if (data.errors && data.errors.length > 0) {
+        setErrors(data.errors);
+      }
+    } catch (err) {
+      setLoading(false);
+      setSummary({ message: "Something went wrong. Try again!" });
+    }
   };
 
   return (
@@ -65,27 +68,35 @@ function ContactUploader() {
           />
         </div>
 
+        {/* Uploading spinner */}
+        {loading && <p className="text-info text-center">⏳ Uploading...</p>}
+
+        {/* Summary message */}
+        {summary && (
+          <div className="mt-3 alert alert-info">
+            <strong>{summary.message}</strong>
+            {summary.inserted !== undefined && (
+              <div>
+                ✅ Inserted: {summary.inserted} <br />
+                ❌ Failed: {summary.failed}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Error list */}
         {errors.length > 0 && (
           <div className="mt-4 error-box">
             <h5 className="error-title">Invalid Rows Found:</h5>
             <ul className="mb-0 error-list">
               {errors.map((err, index) => (
                 <li key={index}>
-                  Row {err.row}: {err.message}
+                  Row {err.row}: {err.error}
                 </li>
               ))}
             </ul>
           </div>
         )}
-
-        <div className="text-center mt-4">
-          <button
-            className="btn btn-primary px-4 py-2 fw-semibold"
-            disabled={errors.length > 0}
-          >
-            Upload
-          </button>
-        </div>
       </div>
     </div>
   );
