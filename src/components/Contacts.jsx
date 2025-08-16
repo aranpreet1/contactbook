@@ -151,7 +151,7 @@ function Contacts() {
                 />
               </th>
               <th>Username</th>
-              <th>Email</th>
+              {/* <th>Email</th> */}
               <th>Phone</th>
               <th>Actions</th>
             </tr>
@@ -167,7 +167,7 @@ function Contacts() {
                   />
                 </td>
                 <td>{c.username}</td>
-                <td>{c.email}</td>
+                {/* <td>{c.email}</td> */}
                 <td>{c.phonenumber}</td>
                 <td>
                   <button
