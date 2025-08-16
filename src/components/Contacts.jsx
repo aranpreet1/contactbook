@@ -132,10 +132,10 @@ function Contacts() {
           />
         </div>
         {/* Download */}
-
+            <div className="d-flex justify-content-between mb-3">
         <button className="btn btn-success ms-2" onClick={handleDownload}>
           ⬇️ Download Excel
-        </button>
+        </button></div>
         {/* Table */}
         <table className="table table-hover table-bordered align-middle">
           <thead className="table-light">
