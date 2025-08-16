@@ -13,7 +13,7 @@ function ContactView() {
   useEffect(() => {
     const fetchContact = async () => {
       try {
-        const res = await axios.get(`http://localhost:8000/api/contact/${id}`);
+        const res = await axios.get(`http://localhost:8000/api/contact/single/${id}`);
         setContact(res.data.data[0] || null);
         console.log(res)
       } catch (err) {

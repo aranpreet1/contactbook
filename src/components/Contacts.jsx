@@ -90,6 +90,29 @@ function Contacts() {
     }
   };
 
+  // Download excel file
+
+  const handleDownload = async () => {
+    try {
+      const res = await axios.get("http://localhost:8000/api/contact/export", {
+        responseType: "blob", // important for binary files
+      });
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+
+      // Create a link and trigger download
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "contacts.xlsx"); // filename
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error("Failed to download file", err);
+    }
+  };
+
   return (
     <div className="container-fluid d-flex justify-content-center align-items-start py-5 page-background">
       <div className="col-12 col-md-10 p-4 glass-container shadow">
@@ -108,7 +131,11 @@ function Contacts() {
             }}
           />
         </div>
+        {/* Download */}
 
+        <button className="btn btn-success ms-2" onClick={handleDownload}>
+          ⬇️ Download Excel
+        </button>
         {/* Table */}
         <table className="table table-hover table-bordered align-middle">
           <thead className="table-light">
