@@ -173,7 +173,7 @@ function Contacts() {
                 <td>
                   <button
                     className="btn btn-info btn-sm me-2"
-                    onClick={() => navigate(`contact/${c.id}`)}
+                    onClick={() => navigate(`/api/contact/${c.id}`)}
                   >
                     View
                   </button>
