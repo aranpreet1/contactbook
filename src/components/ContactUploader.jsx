@@ -19,26 +19,47 @@ function ContactUploader() {
       setErrors([]);
       setSummary(null);
 
-      // ✅ Get token from localStorage (saved after login)
+      // ✅ Get token from localStorage
       const token = localStorage.getItem("authToken");
 
       const response = await fetch("http://localhost:8000/api/contact/upload", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`, // ✅ attach token here
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
 
-      const data = await response.json();
       setLoading(false);
+
+      // ✅ Handle special case: status 300 => buffer download
+      if (response.status === 300) {
+        const blob = await response.blob();
+
+        // Create a temporary download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "InvalidContacts.xlsx"; // name for the file
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        // Clean up URL
+        window.URL.revokeObjectURL(url);
+
+        setSummary({ message: "⚠️ Some rows were invalid. Download generated." });
+        return;
+      }
+
+      // ✅ Otherwise, parse as JSON
+      const data = await response.json();
 
       if (!response.ok) {
         setSummary({ message: data.message || "Upload failed" });
         return;
       }
 
-      // Show backend response
       setSummary({
         message: data.message,
         inserted: data.inserted,
