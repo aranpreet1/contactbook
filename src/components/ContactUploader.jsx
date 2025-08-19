@@ -19,8 +19,14 @@ function ContactUploader() {
       setErrors([]);
       setSummary(null);
 
+      // ✅ Get token from localStorage (saved after login)
+      const token = localStorage.getItem("authToken");
+
       const response = await fetch("http://localhost:8000/api/contact/upload", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ attach token here
+        },
         body: formData,
       });
 

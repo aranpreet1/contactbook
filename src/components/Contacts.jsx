@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "../styles/style.css"; // reused styles
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
 
+import { useNavigate } from "react-router-dom";
+import api from "./api";
 // inside Contacts()
 
 function Contacts() {
@@ -27,7 +27,7 @@ function Contacts() {
   const navigate = useNavigate();
   const fetchContacts = async () => {
     try {
-      const res = await axios.get("http://localhost:8000/api/contact", {
+      const res = await api.get("/contact", {
         params: { page: currentPage, limit: pageSize, search },
       });
       setContacts(res.data.data || []);
@@ -40,7 +40,7 @@ function Contacts() {
   // ✅ Delete from backend
   const deleteContact = async (id) => {
     try {
-      await axios.delete(`http://localhost:8000/api/contact/${id}`);
+      await api.delete(`/contact/${id}`);
       fetchContacts();
     } catch (err) {
       console.error("Failed to delete contact", err);
@@ -57,8 +57,8 @@ function Contacts() {
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.put(
-        `http://localhost:8000/api/contact/${updateData.id}`,
+      await api.put(
+        `/contact/${updateData.id}`,
         updateData
       );
       setShowUpdateModal(false);
@@ -69,6 +69,7 @@ function Contacts() {
   };
 
   // Fetch when page/search changes
+  
   useEffect(() => {
     fetchContacts();
   }, [currentPage, search]);
@@ -94,7 +95,7 @@ function Contacts() {
 
   const handleDownload = async () => {
     try {
-      const res = await axios.get("http://localhost:8000/api/contact/export", {
+      const res = await api.get("contact/export", {
         responseType: "blob", // important for binary files
       });
 
@@ -172,7 +173,7 @@ function Contacts() {
                 <td>
                   <button
                     className="btn btn-info btn-sm me-2"
-                    onClick={() => navigate(`/api/contact/${c.id}`)}
+                    onClick={() => navigate(`contact/${c.id}`)}
                   >
                     View
                   </button>
