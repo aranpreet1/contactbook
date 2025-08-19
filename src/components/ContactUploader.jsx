@@ -48,7 +48,7 @@ function ContactUploader() {
         // Clean up URL
         window.URL.revokeObjectURL(url);
 
-        setSummary({ message: "⚠️ Some rows were invalid. Download generated." });
+        setSummary({ message: "Download generated." });
         return;
       }
 
